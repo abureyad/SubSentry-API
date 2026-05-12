@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SubSentry.API/SubSentry.API.csproj" />
+  <Project Path="SubSentry.BLL/SubSentry.BLL.csproj" />
+  <Project Path="SubSentry.DAL/SubSentry.DAL.csproj" />
+</Solution>

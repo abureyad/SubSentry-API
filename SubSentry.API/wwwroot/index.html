@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubSentry | FinTech Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: none;
+        }
+    </style>
+</head>
+<body class="p-5">
+
+    <div class="container">
+        <h2 class="mb-4 text-primary">SubSentry Financial Dashboard</h2>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card p-4 text-center">
+                    <h5 class="text-muted">Monthly Recurring Revenue</h5>
+                    <h2 class="text-success" id="mrrDisplay">$0.00</h2>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-4">
+                    <h5>Run Billing Engine</h5>
+                    <p class="text-muted small">Trigger the N-Tier workflow to process all pending subscriptions and generate audit logs.</p>
+                    <div class="input-group">
+                        <input type="number" id="subIdInput" class="form-control" placeholder="Enter Subscription ID">
+                        <button class="btn btn-primary" onclick="processBilling()">Process Billing</button>
+                    </div>
+                    <div id="actionResult" class="mt-2 small text-success"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-4">
+            <h5 class="text-danger mb-3">⚠️ Overdue Risk Alerts</h5>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Sub ID</th>
+                        <th>Client Name</th>
+                        <th>Status</th>
+                        <th>Expected Billing Date</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    // Fetch and display Revenue and Alerts
+    async function loadDashboard() {
+        // Load Revenue
+        const revResponse = await fetch('/api/subscriptions/revenue-report');
+        if(revResponse.ok) {
+            const data = await revResponse.json();
+            document.getElementById('mrrDisplay').innerText = '$' + data.monthlyRecurringRevenue.toFixed(2);
+        }
+
+        // Load Risk Alerts
+        const alertsResponse = await fetch('/api/subscriptions/alerts/overdue');
+        if(alertsResponse.ok) {
+            const alertData = await alertsResponse.json();
+            const tbody = document.getElementById('alertsTableBody');
+            tbody.innerHTML = '';
+            alertData.riskyAccounts.forEach(sub => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${sub.id}</td>
+                        <td>${sub.user ? sub.user.fullName : 'Unknown'}</td>
+                        <td><span class="badge bg-warning text-dark">${sub.status}</span></td>
+                        <td>${new Date(sub.nextBillingDate).toLocaleDateString()}</td>
+                    </tr>`;
+            });
+        }
+    }
+
+    // Trigger Billing Workflow
+    async function processBilling() {
+        const id = document.getElementById('subIdInput').value;
+        if(!id) return;
+
+        const response = await fetch(`/api/subscriptions/${id}/process-billing`, { method: 'POST' });
+        const resultDiv = document.getElementById('actionResult');
+
+        if(response.ok) {
+            resultDiv.innerText = "Success! Audit log created.";
+            loadDashboard(); // Refresh data to show changes
+        } else {
+            resultDiv.className = "mt-2 small text-danger";
+            resultDiv.innerText = "Error: Could not process subscription.";
+        }
+    }
+
+    // Load on start
+    loadDashboard();
+    </script>
+</body>
+</html>
